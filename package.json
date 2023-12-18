@@ -1,0 +1,32 @@
+{
+  "name": "odata-qb",
+  "version": "1.0.0",
+  "description": "Functional OData query builder utility.",
+  "main": "index.ts",
+  "homepage": "https://github.com/matheusb432/odata-qb",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/matheusb432/odata-qb.git"
+  },
+  "compilerOptions": {
+    "esModuleInterop": true
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "odata",
+    "query",
+    "builder",
+    "typescript",
+    "ts"
+  ],
+  "author": "Matheus Almeida Bastos <matheusalmeidabastos@hotmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.10.5",
+    "ts-loader": "^9.5.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}
