@@ -8,6 +8,7 @@
     "type": "git",
     "url": "git+https://github.com/matheusb432/odata-qb.git"
   },
+  "type": "module",
   "compilerOptions": {
     "esModuleInterop": true
   },

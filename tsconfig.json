@@ -10,7 +10,9 @@
     "experimentalDecorators": true,
     "sourceMap": true,
     "declaration": true,
+    "esModuleInterop": true,
     "moduleResolution": "node"
   },
+  "ts-node": { "esm": true, "experimentalSpecifierResolution": "node" },
   "exclude": ["lib-esm", "samples"]
 }
