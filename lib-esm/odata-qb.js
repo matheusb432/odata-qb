@@ -20,7 +20,7 @@ function params(options) {
     const queryString = builder.query(options);
     return queryString;
 }
-export const odataUtil = {
+export const odataQb = {
     query,
     params,
 };

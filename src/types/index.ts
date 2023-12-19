@@ -23,6 +23,8 @@ export enum ODataOperators {
   Not,
   In,
   Contains,
+  StartsWith,
+  EndsWith,
   AsRaw,
   BetweenInclusive,
 }
@@ -37,6 +39,8 @@ export const odataOperators = {
   [ODataOperators.Or]: 'or',
   [ODataOperators.Not]: 'not',
   [ODataOperators.Contains]: 'contains',
+  [ODataOperators.StartsWith]: 'startswith',
+  [ODataOperators.EndsWith]: 'endswith',
   [ODataOperators.In]: 'in',
 } as const;
 

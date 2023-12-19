@@ -153,10 +153,13 @@ const builder = {
     const normalized = builder.normalize(value);
 
     if (normalized === undefined) return '';
-    if (operator === ODataOperators.Contains) {
-      return `${
-        odataOperators[ODataOperators.Contains]
-      }(${key}, ${normalized})${separator}`;
+
+    if (
+      operator === ODataOperators.Contains ||
+      operator === ODataOperators.StartsWith ||
+      operator === ODataOperators.EndsWith
+    ) {
+      return `${odataOperators[operator]}(${key}, ${normalized})${separator}`;
     }
 
     const operatorStr = odataOperators[operator as never];

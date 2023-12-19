@@ -12,7 +12,7 @@ import { ODataOptions } from './types';
  */
 declare function query(url: string, options?: ODataOptions): string;
 declare function params(options: ODataOptions): string;
-export declare const odataUtil: {
+export declare const odataQb: {
     query: typeof query;
     params: typeof params;
 };

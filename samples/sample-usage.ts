@@ -5,9 +5,5 @@ const result = odataQb.query('https://example.com', {
   orderBy: ['name', 'asc'],
 });
 
-const expectedParams = {
-  filter: "$filter=(name eq 'John') and (age ge 20)",
-  orderBy: '$orderby=name asc',
-};
-
+// ? https://example.com?$filter=(name eq 'John') and (age ge 20)&$orderby=name asc
 console.log(result);
