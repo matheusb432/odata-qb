@@ -4,3 +4,4 @@
 node_modules
 examples
 src
+jest.config.json
