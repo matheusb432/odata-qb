@@ -1,25 +1,26 @@
 import { odataQb } from '../src';
 import { ODataFilterType, ODataOp } from '../src/types';
+
 const result = odataQb.params({
   filter: {
     _0: [
       [
-        ODataFilterType.NestedFilter,
+        ODataFilterType.NestedFilter, // (
         {
-          name: [ODataOp.Eq, 'John', ODataOp.Or],
-          houseId: [ODataOp.In, [10, 20, 30]],
+          name: [ODataOp.Eq, 'John', ODataOp.Or], // (name eq 'John')
+          houseId: [ODataOp.In, [10, 20, 30]], // or (houseId in (10,20,30))
         },
       ],
-    ],
-    email: [ODataOp.EndsWith, 'gmail.com'],
+    ], // )
+    email: [ODataOp.EndsWith, 'gmail.com'], // and endswith(email, 'gmail.com')
     _1: [
       [
-        ODataFilterType.NestedFilter,
+        ODataFilterType.NestedFilter, // (
         {
-          age: 30,
-          address: [ODataOp.Contains, 'NYC'],
+          age: 30, // (age eq 30)
+          address: [ODataOp.Contains, 'NYC'], // and contains(address, 'NYC')
         },
-      ],
+      ], // )
     ],
   },
 });
