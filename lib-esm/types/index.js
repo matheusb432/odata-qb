@@ -11,8 +11,10 @@ export var ODataOperators;
     ODataOperators[ODataOperators["Not"] = 8] = "Not";
     ODataOperators[ODataOperators["In"] = 9] = "In";
     ODataOperators[ODataOperators["Contains"] = 10] = "Contains";
-    ODataOperators[ODataOperators["AsRaw"] = 11] = "AsRaw";
-    ODataOperators[ODataOperators["BetweenInclusive"] = 12] = "BetweenInclusive";
+    ODataOperators[ODataOperators["StartsWith"] = 11] = "StartsWith";
+    ODataOperators[ODataOperators["EndsWith"] = 12] = "EndsWith";
+    ODataOperators[ODataOperators["AsRaw"] = 13] = "AsRaw";
+    ODataOperators[ODataOperators["BetweenInclusive"] = 14] = "BetweenInclusive";
 })(ODataOperators || (ODataOperators = {}));
 export const odataOperators = {
     [ODataOperators.EqualTo]: 'eq',
@@ -25,6 +27,8 @@ export const odataOperators = {
     [ODataOperators.Or]: 'or',
     [ODataOperators.Not]: 'not',
     [ODataOperators.Contains]: 'contains',
+    [ODataOperators.StartsWith]: 'startswith',
+    [ODataOperators.EndsWith]: 'endswith',
     [ODataOperators.In]: 'in',
 };
 export class Guid {

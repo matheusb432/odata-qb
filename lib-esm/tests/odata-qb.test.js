@@ -156,6 +156,36 @@ describe('odata-qb', () => {
                 expect(result).toContain(param);
             }
         });
+        it('should handle operator StartsWith', () => {
+            const result = odataQb.query('https://example.com', {
+                filter: {
+                    name: [[ODataOperators.StartsWith, 'joh']],
+                    height: [[ODataOperators.LessThanOrEqualTo, 180]],
+                },
+            });
+            const expectedParams = {
+                filter: `$filter=startswith(name, 'joh') and (height le 180)`,
+            };
+            expect(result.length).toEqual(`https://example.com?$filter=startswith(name, 'joh') and (height le 180)`.length);
+            for (const param of Object.values(expectedParams)) {
+                expect(result).toContain(param);
+            }
+        });
+        it('should handle operator EndsWith', () => {
+            const result = odataQb.query('https://example.com', {
+                filter: {
+                    name: [[ODataOperators.EndsWith, 'joh']],
+                    height: [[ODataOperators.LessThanOrEqualTo, 180]],
+                },
+            });
+            const expectedParams = {
+                filter: `$filter=endswith(name, 'joh') and (height le 180)`,
+            };
+            expect(result.length).toEqual(`https://example.com?$filter=endswith(name, 'joh') and (height le 180)`.length);
+            for (const param of Object.values(expectedParams)) {
+                expect(result).toContain(param);
+            }
+        });
         it('should handle operator BetweenInclusive', () => {
             const result = odataQb.query('https://example.com', {
                 filter: {

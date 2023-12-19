@@ -1,6 +1,6 @@
 # odata-qb
 
-Functional OData query builder utility.
+Functional **OData** **Q**uery **B**uilder utility for any JS/TS project.
 
 ## Local Build
 
@@ -21,4 +21,12 @@ Then, in the other project, run the following command:
 
 ```bash
 npm link odata-qb
+```
+
+## Tests
+
+Unit tests have been built using [Jest](https://jestjs.io/). To run the tests, run the following command:
+
+```bash
+npm run test
 ```

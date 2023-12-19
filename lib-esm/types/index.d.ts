@@ -17,8 +17,10 @@ export declare enum ODataOperators {
     Not = 8,
     In = 9,
     Contains = 10,
-    AsRaw = 11,
-    BetweenInclusive = 12
+    StartsWith = 11,
+    EndsWith = 12,
+    AsRaw = 13,
+    BetweenInclusive = 14
 }
 export declare const odataOperators: {
     readonly 0: "eq";
@@ -31,6 +33,8 @@ export declare const odataOperators: {
     readonly 7: "or";
     readonly 8: "not";
     readonly 10: "contains";
+    readonly 11: "startswith";
+    readonly 12: "endswith";
     readonly 9: "in";
 };
 export type ODataOptions = {

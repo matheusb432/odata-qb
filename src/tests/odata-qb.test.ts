@@ -1,5 +1,5 @@
 import { odataQb } from '../odata-qb';
-import { Guid, ODataOperators } from '../types';
+import { Guid, ODataFilterTypes, ODataOperators } from '../types';
 
 describe('odata-qb', () => {
   describe('query', () => {
@@ -51,7 +51,7 @@ describe('odata-qb', () => {
       const result = odataQb.query('https://example.com', {
         filter: {
           name: 'Store',
-          users: [[ODataOperators.AsRaw, `/any(w: w/age ge 20)`]],
+          users: [[ODataFilterTypes.Raw, `/any(w: w/age ge 20)`]],
         },
         orderBy: ['name', 'asc'],
       });
@@ -257,6 +257,77 @@ describe('odata-qb', () => {
         'https://example.com?$filter=((age ge 20) and (age le 30)) and (height le 180) and ((aDate ge 2023-05-01) and (aDate le 2023-06-01))'
           .length
       );
+      for (const param of Object.values(expectedParams)) {
+        expect(result).toContain(param);
+      }
+    });
+
+    it('should handle nested filters', () => {
+      const result = odataQb.query('https://example.com', {
+        filter: {
+          height: [[ODataOperators.LessThanOrEqualTo, 180]],
+          _0: [
+            [
+              ODataFilterTypes.NestedFilter,
+              {
+                name: [[ODataOperators.EqualTo, 'John', ODataOperators.Or]],
+                age: [[ODataOperators.GreaterThanOrEqualTo, 20, ODataOperators.Or]],
+                houseId: [[ODataOperators.In, [10, 20, 30]]],
+              },
+            ],
+          ],
+          email: [[ODataOperators.Contains, 'gmail.com']],
+        },
+      });
+
+      const expectedParams = {
+        filter: `$filter=(height le 180) and ((name eq 'John') or (age ge 20) or (houseId in (10,20,30))) and contains(email, 'gmail.com')`,
+      };
+
+      expect(result.length).toEqual(`https://example.com?${expectedParams.filter}`.length);
+      for (const param of Object.values(expectedParams)) {
+        expect(result).toContain(param);
+      }
+    });
+
+    it('should handle multiple nested filters', () => {
+      const result = odataQb.query('https://example.com', {
+        filter: {
+          height: [[ODataOperators.LessThanOrEqualTo, 180]],
+          _0: [
+            [
+              ODataFilterTypes.NestedFilter,
+              {
+                name: [[ODataOperators.EqualTo, 'John', ODataOperators.Or]],
+                age: [[ODataOperators.GreaterThanOrEqualTo, 20, ODataOperators.Or]],
+                houseId: [[ODataOperators.In, [10, 20, 30]]],
+              },
+            ],
+          ],
+          email: [[ODataOperators.Contains, 'gmail.com']],
+          _1: [
+            [
+              ODataFilterTypes.NestedFilter,
+              {
+                birthDate: [
+                  [
+                    ODataOperators.BetweenInclusive,
+                    [new Date(2023, 4, 1), new Date(2023, 5, 1)],
+                    ODataOperators.Or,
+                  ],
+                ],
+                address: [[ODataOperators.Contains, 'NYC']],
+              },
+            ],
+          ],
+        },
+      });
+
+      const expectedParams = {
+        filter: `$filter=(height le 180) and ((name eq 'John') or (age ge 20) or (houseId in (10,20,30))) and contains(email, 'gmail.com') and (((birthDate ge 2023-05-01) and (birthDate le 2023-06-01)) or contains(address, 'NYC'))`,
+      };
+
+      expect(result.length).toEqual(`https://example.com?${expectedParams.filter}`.length);
       for (const param of Object.values(expectedParams)) {
         expect(result).toContain(param);
       }

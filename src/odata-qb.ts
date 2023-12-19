@@ -1,6 +1,7 @@
 import {
   Guid,
   ODataFilter,
+  ODataFilterTypes,
   ODataFilterValue,
   ODataOperators,
   ODataOptions,
@@ -24,6 +25,17 @@ function query(url: string, options?: ODataOptions): string {
   return builder.url(url, options);
 }
 
+/**
+ * @description
+ * Creates a OData URL params based on `options`.
+ *
+ * @example
+ * odataUtil.params({
+ *       filter: { name: 'John', age: [[ODataOperators.LessThanOrEqualTo, 25]] },
+ *       orderBy: ['name', 'asc'],
+ *     })
+ * // Result: "$filter=(name eq 'John') and (age le 25)&$orderby=name asc"
+ */
 function params(options: ODataOptions): string {
   if (!options) return '';
 
@@ -86,6 +98,10 @@ const builder = {
         let filters: string | undefined;
         if (Array.isArray(filterValue)) {
           filters = builder.createOrFilters(key, operator, filterValue, joinOperator);
+        } else if (operator === ODataFilterTypes.NestedFilter) {
+          filterStr += `(${builder.filter(filterValue)})${andSeparator}`;
+          lastJoinOperator = ODataOperators.And;
+          continue;
         } else {
           filters = builder.createFilter(key, operator, filterValue, joinOperator);
         }
@@ -101,7 +117,7 @@ const builder = {
   },
   createOrFilters(
     key: string,
-    operator: ODataOperators,
+    operator: ODataOperators | ODataFilterTypes,
     values: ODataFilterValue[],
     joinOperator: ODataOperators.And | ODataOperators.Or = ODataOperators.And
   ): string {
@@ -143,12 +159,12 @@ const builder = {
   },
   createFilter(
     key: string,
-    operator: ODataOperators,
+    operator: ODataOperators | ODataFilterTypes,
     value: ODataFilterValue,
     joinOperator: ODataOperators.And | ODataOperators.Or = ODataOperators.And
   ): string {
     const separator = joinOperator === ODataOperators.Or ? orSeparator : andSeparator;
-    if (operator === ODataOperators.AsRaw) return `(${key}${value})${separator}`;
+    if (operator === ODataFilterTypes.Raw) return `(${key}${value})${separator}`;
 
     const normalized = builder.normalize(value);
 
