@@ -1,11 +1,11 @@
 import { odataQb } from '../odata-qb';
-import { Guid, ODataFilterTypes, ODataOperators } from '../types';
+import { ODataFilterType, ODataGuid, ODataOp, odataOps } from '../types';
 
 describe('odata-qb', () => {
   describe('query', () => {
     it('should build an OData query string', () => {
       const result = odataQb.query('https://example.com', {
-        filter: { name: 'John', age: [[ODataOperators.GreaterThanOrEqualTo, 20]] },
+        filter: { name: 'John', age: [[ODataOp.Ge, 20]] },
         orderBy: ['name', 'asc'],
       });
 
@@ -29,7 +29,7 @@ describe('odata-qb', () => {
           name: 'John',
           age: undefined,
           someId: NaN,
-          lastName: [[ODataOperators.Contains, undefined]],
+          lastName: [ODataOp.Contains, undefined],
         },
         orderBy: ['name', 'asc'],
       });
@@ -51,19 +51,20 @@ describe('odata-qb', () => {
       const result = odataQb.query('https://example.com', {
         filter: {
           name: 'Store',
-          users: [[ODataFilterTypes.Raw, `/any(w: w/age ge 20)`]],
+          users: [[ODataFilterType.Raw, `/any(w: w/age ${odataOps[ODataOp.Ge]} 20)`]],
+          employeeId: [ODataFilterType.Raw, ` in (1, 2, null)`],
         },
         orderBy: ['name', 'asc'],
       });
 
       const expectedParams = {
-        filter: "$filter=(name eq 'Store') and (users/any(w: w/age ge 20))",
+        filter:
+          "$filter=(name eq 'Store') and (users/any(w: w/age ge 20)) and (employeeId in (1, 2, null))",
         orderBy: '$orderby=name asc',
       };
 
       expect(result.length).toEqual(
-        "https://example.com?$filter=(name eq 'Store') and (users/any(w: w/age ge 20))&$orderby=name asc"
-          .length
+        `https://example.com?${expectedParams.filter}&${expectedParams.orderBy}`.length
       );
       for (const param of Object.values(expectedParams)) {
         expect(result).toContain(param);
@@ -72,8 +73,8 @@ describe('odata-qb', () => {
 
     it('should handle nested orderby props', () => {
       const result = odataQb.query('https://example.com', {
-        filter: { name: 'John', age: [[ODataOperators.GreaterThanOrEqualTo, 20]] },
-        orderBy: [['nested', 'prop', 'test'], 'asc'],
+        filter: { name: 'John', age: [ODataOp.Ge, 20] },
+        orderBy: ['nested/prop/test', 'asc'],
       });
 
       const expectedParams = {
@@ -108,27 +109,45 @@ describe('odata-qb', () => {
       }
     });
 
+    it('should handle Guid filters', () => {
+      const guidStr = '64fd1ec3-1d41-ee11-9d4a-86afca43b09d';
+      const result = odataQb.query('https://example.com', {
+        filter: { guidProp: [ODataOp.Gt, new ODataGuid(guidStr)] },
+      });
+
+      const expectedParams = {
+        filter: `$filter=(guidProp gt ${guidStr})`,
+      };
+
+      expect(result.length).toEqual(
+        `https://example.com?$filter=(guidProp gt ${guidStr})`.length
+      );
+      for (const param of Object.values(expectedParams)) {
+        expect(result).toContain(param);
+      }
+    });
+
     it('should handle large queries', () => {
       const date = new Date(2023, 4, 1);
       const guidStr = '64fd1ec3-1d41-ee11-9d4a-86afca43b09d';
       const result = odataQb.query('/example', {
         filter: {
           name: 'John',
-          city: [[ODataOperators.EqualTo, 'New York', ODataOperators.Or]],
+          city: [ODataOp.Eq, 'New York', ODataOp.Or],
           age: undefined,
-          someProp: [[ODataOperators.GreaterThanOrEqualTo, [20, 30, 40]]],
+          someProp: [ODataOp.Ge, [20, 30, 40]],
           anotherProp: [
-            [ODataOperators.GreaterThanOrEqualTo, 50],
-            [ODataOperators.LessThanOrEqualTo, 100],
+            [ODataOp.Ge, 50],
+            [ODataOp.Le, 100],
           ],
-          guidProp: [[ODataOperators.GreaterThan, new Guid(guidStr)]],
+          guidProp: [ODataOp.Gt, new ODataGuid(guidStr)],
           'yetAnotherProp/its/nested': date,
-          lastName: [[ODataOperators.Contains, undefined]],
+          lastName: [ODataOp.Contains, undefined],
         },
         orderBy: [
-          [['nested', 'prop', 'test'], 'asc'],
+          ['nested/prop/test', 'asc'],
           ['title', 'asc'],
-          [['city', 'date'], 'desc'],
+          ['city/date', 'desc'],
         ],
         count: true,
         skip: 30,
@@ -161,7 +180,7 @@ describe('odata-qb', () => {
         filter: {
           name: 'John',
           age: undefined,
-          height: [[ODataOperators.LessThanOrEqualTo, 180]],
+          height: [[ODataOp.Le, 180]],
         },
       });
 
@@ -180,8 +199,8 @@ describe('odata-qb', () => {
     it('should handle operator In', () => {
       const result = odataQb.query('https://example.com', {
         filter: {
-          age: [[ODataOperators.In, [10, 20, 30]]],
-          height: [[ODataOperators.LessThanOrEqualTo, 180]],
+          age: [ODataOp.In, [10, 20, 30]],
+          height: [ODataOp.Le, 180],
         },
       });
 
@@ -189,9 +208,7 @@ describe('odata-qb', () => {
         filter: '$filter=(age in (10,20,30)) and (height le 180)',
       };
 
-      expect(result.length).toEqual(
-        'https://example.com?$filter=(age in (10,20,30)) and (height le 180)'.length
-      );
+      expect(result.length).toEqual(`https://example.com?${expectedParams.filter}`.length);
       for (const param of Object.values(expectedParams)) {
         expect(result).toContain(param);
       }
@@ -200,8 +217,8 @@ describe('odata-qb', () => {
     it('should handle operator StartsWith', () => {
       const result = odataQb.query('https://example.com', {
         filter: {
-          name: [[ODataOperators.StartsWith, 'joh']],
-          height: [[ODataOperators.LessThanOrEqualTo, 180]],
+          name: [ODataOp.StartsWith, 'joh'],
+          height: [ODataOp.Le, 180],
         },
       });
 
@@ -209,9 +226,7 @@ describe('odata-qb', () => {
         filter: `$filter=startswith(name, 'joh') and (height le 180)`,
       };
 
-      expect(result.length).toEqual(
-        `https://example.com?$filter=startswith(name, 'joh') and (height le 180)`.length
-      );
+      expect(result.length).toEqual(`https://example.com?${expectedParams.filter}`.length);
       for (const param of Object.values(expectedParams)) {
         expect(result).toContain(param);
       }
@@ -220,8 +235,8 @@ describe('odata-qb', () => {
     it('should handle operator EndsWith', () => {
       const result = odataQb.query('https://example.com', {
         filter: {
-          name: [[ODataOperators.EndsWith, 'joh']],
-          height: [[ODataOperators.LessThanOrEqualTo, 180]],
+          name: [ODataOp.EndsWith, 'joh'],
+          height: [ODataOp.Le, 180],
         },
       });
 
@@ -229,9 +244,7 @@ describe('odata-qb', () => {
         filter: `$filter=endswith(name, 'joh') and (height le 180)`,
       };
 
-      expect(result.length).toEqual(
-        `https://example.com?$filter=endswith(name, 'joh') and (height le 180)`.length
-      );
+      expect(result.length).toEqual(`https://example.com?${expectedParams.filter}`.length);
       for (const param of Object.values(expectedParams)) {
         expect(result).toContain(param);
       }
@@ -240,10 +253,11 @@ describe('odata-qb', () => {
     it('should handle operator BetweenInclusive', () => {
       const result = odataQb.query('https://example.com', {
         filter: {
-          age: [[ODataOperators.BetweenInclusive, [20, 30]]],
-          height: [[ODataOperators.LessThanOrEqualTo, 180]],
+          age: [ODataFilterType.BetweenInclusive, [20, 30]],
+          height: [ODataOp.Le, 180],
           aDate: [
-            [ODataOperators.BetweenInclusive, [new Date(2023, 4, 1), new Date(2023, 5, 1)]],
+            ODataFilterType.BetweenInclusive,
+            [new Date(2023, 4, 1), new Date(2023, 5, 1)],
           ],
         },
       });
@@ -253,10 +267,30 @@ describe('odata-qb', () => {
           '$filter=((age ge 20) and (age le 30)) and (height le 180) and ((aDate ge 2023-05-01) and (aDate le 2023-06-01))',
       };
 
-      expect(result.length).toEqual(
-        'https://example.com?$filter=((age ge 20) and (age le 30)) and (height le 180) and ((aDate ge 2023-05-01) and (aDate le 2023-06-01))'
-          .length
-      );
+      expect(result.length).toEqual(`https://example.com?${expectedParams.filter}`.length);
+      for (const param of Object.values(expectedParams)) {
+        expect(result).toContain(param);
+      }
+    });
+
+    it('should handle operator BetweenExclusive', () => {
+      const result = odataQb.query('https://example.com', {
+        filter: {
+          age: [ODataFilterType.BetweenExclusive, [20, 30]],
+          height: [ODataOp.Le, 180],
+          aDate: [
+            ODataFilterType.BetweenExclusive,
+            [new Date(2023, 4, 1), new Date(2023, 5, 1)],
+          ],
+        },
+      });
+
+      const expectedParams = {
+        filter:
+          '$filter=((age gt 20) and (age lt 30)) and (height le 180) and ((aDate gt 2023-05-01) and (aDate lt 2023-06-01))',
+      };
+
+      expect(result.length).toEqual(`https://example.com?${expectedParams.filter}`.length);
       for (const param of Object.values(expectedParams)) {
         expect(result).toContain(param);
       }
@@ -265,18 +299,18 @@ describe('odata-qb', () => {
     it('should handle nested filters', () => {
       const result = odataQb.query('https://example.com', {
         filter: {
-          height: [[ODataOperators.LessThanOrEqualTo, 180]],
+          height: [ODataOp.Le, 180],
           _0: [
             [
-              ODataFilterTypes.NestedFilter,
+              ODataFilterType.NestedFilter,
               {
-                name: [[ODataOperators.EqualTo, 'John', ODataOperators.Or]],
-                age: [[ODataOperators.GreaterThanOrEqualTo, 20, ODataOperators.Or]],
-                houseId: [[ODataOperators.In, [10, 20, 30]]],
+                name: [ODataOp.Eq, 'John', ODataOp.Or],
+                age: [ODataOp.Ge, 20, ODataOp.Or],
+                houseId: [ODataOp.In, [10, 20, 30]],
               },
             ],
           ],
-          email: [[ODataOperators.Contains, 'gmail.com']],
+          email: [ODataOp.Contains, 'gmail.com'],
         },
       });
 
@@ -293,30 +327,30 @@ describe('odata-qb', () => {
     it('should handle multiple nested filters', () => {
       const result = odataQb.query('https://example.com', {
         filter: {
-          height: [[ODataOperators.LessThanOrEqualTo, 180]],
+          height: [ODataOp.Le, 180],
           _0: [
             [
-              ODataFilterTypes.NestedFilter,
+              ODataFilterType.NestedFilter,
               {
-                name: [[ODataOperators.EqualTo, 'John', ODataOperators.Or]],
-                age: [[ODataOperators.GreaterThanOrEqualTo, 20, ODataOperators.Or]],
-                houseId: [[ODataOperators.In, [10, 20, 30]]],
+                name: [ODataOp.Eq, 'John', ODataOp.Or],
+                age: [ODataOp.Ge, 20, ODataOp.Or],
+                houseId: [ODataOp.In, [10, 20, 30]],
               },
             ],
           ],
-          email: [[ODataOperators.Contains, 'gmail.com']],
+          email: [ODataOp.Contains, 'gmail.com'],
           _1: [
             [
-              ODataFilterTypes.NestedFilter,
+              ODataFilterType.NestedFilter,
               {
                 birthDate: [
                   [
-                    ODataOperators.BetweenInclusive,
+                    ODataFilterType.BetweenInclusive,
                     [new Date(2023, 4, 1), new Date(2023, 5, 1)],
-                    ODataOperators.Or,
+                    ODataOp.Or,
                   ],
                 ],
-                address: [[ODataOperators.Contains, 'NYC']],
+                address: [ODataOp.Contains, 'NYC'],
               },
             ],
           ],
@@ -343,7 +377,7 @@ describe('odata-qb', () => {
 
     it('should return an object with filter parameters', () => {
       const result = odataQb.params({
-        filter: { name: 'John', age: [[ODataOperators.GreaterThanOrEqualTo, 20]] },
+        filter: { name: 'John', age: [ODataOp.Ge, 20] },
       });
       const expected = "$filter=(name eq 'John') and (age ge 20)";
       expect(result.length).toEqual(expected.length);
@@ -351,7 +385,7 @@ describe('odata-qb', () => {
 
     it('should return an object with orderby parameters', () => {
       const result = odataQb.params({
-        orderBy: [['name', 'asc']],
+        orderBy: ['name', 'asc'],
       });
       const expected = '$orderby=name asc';
       expect(result.length).toEqual(expected.length);

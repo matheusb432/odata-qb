@@ -15,5 +15,5 @@
     "moduleResolution": "node"
   },
   "ts-node": { "esm": true, "experimentalSpecifierResolution": "node" },
-  "exclude": ["lib-esm", "samples"]
+  "exclude": ["lib-esm", "examples"]
 }

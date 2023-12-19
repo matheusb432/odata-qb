@@ -1,12 +1,13 @@
 import {
-  Guid,
+  ODataGuid,
   ODataFilter,
-  ODataFilterTypes,
+  ODataFilterType,
   ODataFilterValue,
-  ODataOperators,
+  ODataOp,
   ODataOptions,
-  ODataOrderBy,
-  odataOperators,
+  ODataOrderByOperation,
+  odataOps,
+  ODataFilterOperation,
 } from './types';
 import { dateUtil } from './util/date-util';
 
@@ -15,8 +16,8 @@ import { dateUtil } from './util/date-util';
  * Creates a OData URL based on `url` & `options`.
  *
  * @example
- * odataUtil.build('https://website.com', {
- *       filter: { name: 'John', age: [[ODataOperators.LessThanOrEqualTo, 25]] },
+ * odataQb.query('https://website.com', {
+ *       filter: { name: 'John', age: [ODataOp.Le, 25] },
  *       orderBy: ['name', 'asc'],
  *     })
  * // Result: "https://website.com?$filter=(name eq 'John') and (age le 25)&$orderby=name asc"
@@ -30,8 +31,8 @@ function query(url: string, options?: ODataOptions): string {
  * Creates a OData URL params based on `options`.
  *
  * @example
- * odataUtil.params({
- *       filter: { name: 'John', age: [[ODataOperators.LessThanOrEqualTo, 25]] },
+ * odataQb.params({
+ *       filter: { name: 'John', age: [ODataOp.Le, 25] },
  *       orderBy: ['name', 'asc'],
  *     })
  * // Result: "$filter=(name eq 'John') and (age le 25)&$orderby=name asc"
@@ -49,8 +50,8 @@ export const odataQb = {
   params,
 };
 
-const orSeparator = ` ${odataOperators[ODataOperators.Or]} `;
-const andSeparator = ` ${odataOperators[ODataOperators.And]} `;
+const orSeparator = ` ${odataOps[ODataOp.Or]} `;
+const andSeparator = ` ${odataOps[ODataOp.And]} `;
 
 const builder = {
   url(baseUrl: string, options?: ODataOptions): string {
@@ -62,11 +63,6 @@ const builder = {
     }
 
     return queryUrl;
-  },
-  mergeUrlToRawParams(url: string, params: string): string {
-    if (!params) return url;
-
-    return `${url}?${params}`;
   },
   query(options: ODataOptions): string {
     let queryStr = '';
@@ -83,73 +79,79 @@ const builder = {
   },
   filter(filter: ODataFilter): string {
     let filterStr = '';
-    let lastJoinOperator: ODataOperators | undefined;
+    let lastJoinOperator: ODataOp | undefined;
 
     for (const key in filter) {
       const value = filter[key];
       if (value === undefined) continue;
 
       if (!Array.isArray(value)) {
-        filterStr += builder.createFilter(key, ODataOperators.EqualTo, value);
+        filterStr += builder.createFilter(key, ODataOp.Eq, value);
+        lastJoinOperator = undefined;
         continue;
       }
 
-      for (const [operator, filterValue, joinOperator] of value) {
-        let filters: string | undefined;
-        if (Array.isArray(filterValue)) {
-          filters = builder.createOrFilters(key, operator, filterValue, joinOperator);
-        } else if (operator === ODataFilterTypes.NestedFilter) {
-          filterStr += `(${builder.filter(filterValue)})${andSeparator}`;
-          lastJoinOperator = ODataOperators.And;
-          continue;
-        } else {
-          filters = builder.createFilter(key, operator, filterValue, joinOperator);
-        }
+      if (!Array.isArray(value[0])) {
+        filterStr += builder.handleFilterOperation(key, value as ODataFilterOperation);
+        lastJoinOperator = value[2] as ODataOp.Or | undefined;
+        continue;
+      }
 
-        if (!filters) continue;
-        filterStr += filters;
-        lastJoinOperator = joinOperator;
+      for (const operation of value as ODataFilterOperation[]) {
+        filterStr += builder.handleFilterOperation(key, operation);
+        lastJoinOperator = operation[2];
       }
     }
-    const separator = lastJoinOperator === ODataOperators.Or ? orSeparator : andSeparator;
+    const separator = lastJoinOperator === ODataOp.Or ? orSeparator : andSeparator;
 
     return builder.sliceSeparator(filterStr, separator);
   },
+  handleFilterOperation(key: string, operation: ODataFilterOperation): string {
+    const [operator, filterValue, joinOperator] = operation;
+    if (Array.isArray(filterValue)) {
+      return builder.createOrFilters(key, operator, filterValue, joinOperator);
+    }
+    if (operator === ODataFilterType.NestedFilter) {
+      return `(${builder.filter(filterValue)})${andSeparator}`;
+    }
+    return builder.createFilter(key, operator, filterValue, joinOperator);
+  },
   createOrFilters(
     key: string,
-    operator: ODataOperators | ODataFilterTypes,
+    operator: ODataOp | ODataFilterType,
     values: ODataFilterValue[],
-    joinOperator: ODataOperators.And | ODataOperators.Or = ODataOperators.And
+    joinOperator: ODataOp.And | ODataOp.Or = ODataOp.And
   ): string {
-    const separator = joinOperator === ODataOperators.Or ? orSeparator : andSeparator;
+    const separator = joinOperator === ODataOp.Or ? orSeparator : andSeparator;
 
-    if (operator === ODataOperators.BetweenInclusive) {
-      if (values.length !== 2) {
-        console.error(
-          `BetweenInclusive operator requires exactly 2 values, ${values.length} given.`
-        );
-        return '';
-      }
+    if (operator === ODataFilterType.BetweenInclusive) {
       const [start, end] = values;
 
-      return `((${key} ${
-        odataOperators[ODataOperators.GreaterThanOrEqualTo]
-      } ${builder.normalize(start)}) and (${key} ${
-        odataOperators[ODataOperators.LessThanOrEqualTo]
-      } ${builder.normalize(end)}))${separator}`;
+      return `((${key} ${odataOps[ODataOp.Ge]} ${builder.normalize(
+        start
+      )})${andSeparator}(${key} ${odataOps[ODataOp.Le]} ${builder.normalize(
+        end
+      )}))${separator}`;
+    }
+    if (operator === ODataFilterType.BetweenExclusive) {
+      const [start, end] = values;
+
+      return `((${key} ${odataOps[ODataOp.Gt]} ${builder.normalize(
+        start
+      )})${andSeparator}(${key} ${odataOps[ODataOp.Lt]} ${builder.normalize(
+        end
+      )}))${separator}`;
     }
 
-    if (operator === ODataOperators.In) {
+    if (operator === ODataOp.In) {
       const inFilterValue = `(${values.map((x) => builder.normalize(x)).join(',')})`;
 
-      return `(${key} ${odataOperators[ODataOperators.In]} ${inFilterValue})${separator}`;
-    }
-    let orFilterStr = '';
-
-    for (const value of values) {
-      orFilterStr += builder.createFilter(key, operator, value, ODataOperators.Or);
+      return `(${key} ${odataOps[ODataOp.In]} ${inFilterValue})${separator}`;
     }
 
+    const orFilterStr = values
+      .map((value) => builder.createFilter(key, operator, value, ODataOp.Or))
+      .join('');
     if (!orFilterStr) return '';
 
     return `(${builder.sliceSeparator(orFilterStr, orSeparator)})${separator}`;
@@ -159,69 +161,51 @@ const builder = {
   },
   createFilter(
     key: string,
-    operator: ODataOperators | ODataFilterTypes,
+    operator: ODataOp | ODataFilterType,
     value: ODataFilterValue,
-    joinOperator: ODataOperators.And | ODataOperators.Or = ODataOperators.And
+    joinOperator: ODataOp.And | ODataOp.Or = ODataOp.And
   ): string {
-    const separator = joinOperator === ODataOperators.Or ? orSeparator : andSeparator;
-    if (operator === ODataFilterTypes.Raw) return `(${key}${value})${separator}`;
+    const separator = joinOperator === ODataOp.Or ? orSeparator : andSeparator;
+    if (operator === ODataFilterType.Raw) return `(${key}${value})${separator}`;
 
     const normalized = builder.normalize(value);
 
     if (normalized === undefined) return '';
 
     if (
-      operator === ODataOperators.Contains ||
-      operator === ODataOperators.StartsWith ||
-      operator === ODataOperators.EndsWith
+      operator === ODataOp.Contains ||
+      operator === ODataOp.StartsWith ||
+      operator === ODataOp.EndsWith
     ) {
-      return `${odataOperators[operator]}(${key}, ${normalized})${separator}`;
+      return `${odataOps[operator]}(${key}, ${normalized})${separator}`;
     }
 
-    const operatorStr = odataOperators[operator as never];
+    const operatorStr = odataOps[operator];
     if (!operatorStr) return '';
     return `(${key} ${operatorStr} ${normalized})${separator}`;
   },
-  normalize(value: ODataFilterValue): string | undefined {
-    if (value == null || Number.isNaN(value)) return undefined;
+  normalize(val: ODataFilterValue): string | undefined {
+    if (val == null || Number.isNaN(val)) return undefined;
 
-    if (typeof value === 'string') return `'${value}'`;
-    if (value instanceof Date) return dateUtil.toYyyyMmDd(value);
-    if (value instanceof Guid) return value.inner;
+    if (typeof val === 'string') return `'${val}'`;
+    if (val instanceof Date) return dateUtil.toYyyyMmDd(val);
+    if (val instanceof ODataGuid) return val.inner;
 
-    return value.toString();
+    return val.toString();
   },
   getFilter(filter: ODataFilter | undefined): string {
     if (!filter) return '';
 
-    const filterString = builder.filter(filter);
+    const filterStr = builder.filter(filter);
 
-    return filterString ? `$filter=${filterString}&` : '';
+    return filterStr ? `$filter=${filterStr}&` : '';
   },
-  getOrderBy(orderBy: ODataOrderBy | ODataOrderBy[] | undefined): string {
-    const orderBys: string[] = [];
-    builder.pushOrderBy(orderBys, orderBy);
-
-    const orderByString = orderBys.join(',');
+  getOrderBy(orderBy: ODataOrderByOperation | ODataOrderByOperation[] | undefined): string {
+    if (!orderBy) return '';
+    const orderByString = Array.isArray(orderBy[0])
+      ? (orderBy as ODataOrderByOperation[]).map((x) => `${x[0]} ${x[1]}`).join(',')
+      : `${orderBy[0]} ${orderBy[1]}`;
 
     return orderByString ? `$orderby=${orderByString}&` : '';
-  },
-  pushOrderBy(
-    orderByRes: string[],
-    orderBy: ODataOrderBy | ODataOrderBy[] | undefined
-  ): void {
-    if (!orderBy) return;
-
-    if (orderBy[1] === 'asc' || orderBy[1] === 'desc') {
-      orderByRes.push(builder.formatNestableItem(orderBy as ODataOrderBy));
-      return;
-    }
-
-    for (const item of orderBy as ODataOrderBy[]) {
-      orderByRes.push(builder.formatNestableItem(item));
-    }
-  },
-  formatNestableItem(item: ODataOrderBy): string {
-    return `${Array.isArray(item[0]) ? item[0].join('/') : item[0]} ${item[1]}`;
   },
 };
