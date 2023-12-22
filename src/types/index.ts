@@ -34,6 +34,14 @@ export type ODataFilterOperation =
       [ODataFilterValue, ODataFilterValue],
       ODataOp.Or
     ]
+  | [
+      ODataFilterType.AnyFunction | ODataFilterType.AllFunction,
+      ODataFilter | ODataSingleFilterOperation
+    ]
+  // | [ODataFilterType.AnyFunction | ODataFilterType.AllFunction, ODataSingleFilterOperation]
+  | ODataSingleFilterOperation;
+
+type ODataSingleFilterOperation =
   | [ODataOp, ODataFilterValue | ODataFilterValue[]]
   | [ODataOp, ODataFilterValue | ODataFilterValue[], ODataOp.Or];
 
@@ -52,6 +60,8 @@ export enum ODataFilterType {
   NestedFilter = 1002,
   BetweenInclusive = 1003,
   BetweenExclusive = 1004,
+  AnyFunction = 1005,
+  AllFunction = 1006,
 }
 /**
  * @description
@@ -134,7 +144,10 @@ export enum ODataOp {
  * `/any(w: w/age ${odataOps[ODataOp.GreaterThanOrEqualTo]} 20)`
  * // '/any(w: w/age ge 20)
  */
-export const odataOps: Record<ODataOp, string> = {
+export const odataOps: Record<ODataOp, string> & {
+  [ODataFilterType.AnyFunction]: string;
+  [ODataFilterType.AllFunction]: string;
+} = {
   [ODataOp.Eq]: 'eq',
   [ODataOp.Ne]: 'ne',
   [ODataOp.Gt]: 'gt',
@@ -148,6 +161,8 @@ export const odataOps: Record<ODataOp, string> = {
   [ODataOp.Contains]: 'contains',
   [ODataOp.StartsWith]: 'startswith',
   [ODataOp.EndsWith]: 'endswith',
+  [ODataFilterType.AnyFunction]: 'any',
+  [ODataFilterType.AllFunction]: 'all',
 } as const;
 
 /**

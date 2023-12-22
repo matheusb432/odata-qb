@@ -4,6 +4,8 @@ export var ODataFilterType;
     ODataFilterType[ODataFilterType["NestedFilter"] = 1002] = "NestedFilter";
     ODataFilterType[ODataFilterType["BetweenInclusive"] = 1003] = "BetweenInclusive";
     ODataFilterType[ODataFilterType["BetweenExclusive"] = 1004] = "BetweenExclusive";
+    ODataFilterType[ODataFilterType["AnyFunction"] = 1005] = "AnyFunction";
+    ODataFilterType[ODataFilterType["AllFunction"] = 1006] = "AllFunction";
 })(ODataFilterType || (ODataFilterType = {}));
 /**
  * @description
@@ -101,6 +103,8 @@ export const odataOps = {
     [ODataOp.Contains]: 'contains',
     [ODataOp.StartsWith]: 'startswith',
     [ODataOp.EndsWith]: 'endswith',
+    [ODataFilterType.AnyFunction]: 'any',
+    [ODataFilterType.AllFunction]: 'all',
 };
 export class ODataGuid {
     get inner() {

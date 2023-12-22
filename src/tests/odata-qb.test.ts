@@ -366,6 +366,70 @@ describe('odata-qb', () => {
         expect(result).toContain(param);
       }
     });
+
+    it('should handle filter type AnyFunction', () => {
+      const result = odataQb.query('https://example.com', {
+        filter: {
+          height: [ODataOp.Le, 180],
+          emails: [ODataFilterType.AnyFunction, [ODataOp.Contains, 'gmail']],
+          users: [
+            ODataFilterType.AnyFunction,
+            {
+              age: [ODataOp.Ge, 20],
+              name: 'John',
+            },
+          ],
+          userNames: [ODataFilterType.AnyFunction, [ODataOp.Ge, 30]],
+          employees: [
+            ODataFilterType.AnyFunction,
+            {
+              companyId: 20,
+            },
+          ],
+        },
+      });
+
+      const expectedParams = {
+        filter: `$filter=(height le 180) and (emails/any(x: contains(x, 'gmail'))) and (users/any(x: (x/age ge 20) and (x/name eq 'John'))) and (userNames/any(x: (x ge 30))) and (employees/any(x: (x/companyId eq 20)))`,
+      };
+
+      expect(result.length).toEqual(`https://example.com?${expectedParams.filter}`.length);
+      for (const param of Object.values(expectedParams)) {
+        expect(result).toContain(param);
+      }
+    });
+
+    it('should handle filter type AllFunction', () => {
+      const result = odataQb.query('https://example.com', {
+        filter: {
+          height: [ODataOp.Le, 180],
+          emails: [ODataFilterType.AllFunction, [ODataOp.Contains, 'gmail']],
+          users: [
+            ODataFilterType.AllFunction,
+            {
+              age: [ODataOp.Ge, 20],
+              name: 'John',
+            },
+          ],
+          userNames: [ODataFilterType.AllFunction, [ODataOp.Ge, 30]],
+          employees: [
+            ODataFilterType.AllFunction,
+            {
+              companyId: 20,
+            },
+          ],
+        },
+      });
+
+      const expectedParams = {
+        filter: `$filter=(height le 180) and (emails/all(x: contains(x, 'gmail'))) and (users/all(x: (x/age ge 20) and (x/name eq 'John'))) and (userNames/all(x: (x ge 30))) and (employees/all(x: (x/companyId eq 20)))`,
+      };
+
+      expect(result.length).toEqual(`https://example.com?${expectedParams.filter}`.length);
+      for (const param of Object.values(expectedParams)) {
+        expect(result).toContain(param);
+      }
+    });
   });
 
   describe('params', () => {

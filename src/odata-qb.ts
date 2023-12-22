@@ -108,13 +108,44 @@ const builder = {
   },
   handleFilterOperation(key: string, operation: ODataFilterOperation): string {
     const [operator, filterValue, joinOperator] = operation;
-    if (Array.isArray(filterValue)) {
-      return builder.createOrFilters(key, operator, filterValue, joinOperator);
+    const isFilterArray = Array.isArray(filterValue);
+
+    if (
+      operator === ODataFilterType.AnyFunction ||
+      operator === ODataFilterType.AllFunction
+    ) {
+      const operatorStr = odataOps[operator];
+      const isNestedFilter = !isFilterArray;
+      if (isNestedFilter) {
+        const resultNestedFilter = builder.filter(
+          builder.createFiltersWithModifiedKeys(filterValue)
+        );
+        return `(${key}/${operatorStr}(x: ${resultNestedFilter}))${andSeparator}`;
+      }
+      const resultFilter = builder.handleFilterOperation('x', filterValue);
+      const resultSeparator = joinOperator === ODataOp.Or ? orSeparator : andSeparator;
+      return `(${key}/${operatorStr}(x: ${builder.sliceSeparator(
+        resultFilter,
+        resultSeparator
+      )}))${andSeparator}`;
+    }
+    if (isFilterArray) {
+      return builder.createOrFilters(
+        key,
+        operator,
+        filterValue as ODataFilterValue[],
+        joinOperator
+      );
     }
     if (operator === ODataFilterType.NestedFilter) {
       return `(${builder.filter(filterValue)})${andSeparator}`;
     }
-    return builder.createFilter(key, operator, filterValue, joinOperator);
+    return builder.createFilter(
+      key,
+      operator,
+      filterValue as ODataFilterValue,
+      joinOperator
+    );
   },
   createOrFilters(
     key: string,
@@ -183,6 +214,14 @@ const builder = {
     const operatorStr = odataOps[operator];
     if (!operatorStr) return '';
     return `(${key} ${operatorStr} ${normalized})${separator}`;
+  },
+  createFiltersWithModifiedKeys(filters: ODataFilter): ODataFilter {
+    const newFilters: ODataFilter = {};
+    Object.keys(filters).forEach((key) => {
+      newFilters[`x/${key}`] = filters[key];
+    });
+
+    return newFilters;
   },
   normalize(val: ODataFilterValue): string | undefined {
     if (val == null || Number.isNaN(val)) return undefined;

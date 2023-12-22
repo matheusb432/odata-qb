@@ -30,14 +30,20 @@ export type ODataFilterOperation = [ODataFilterType.Raw, string] | [ODataFilterT
         ODataFilterValue
     ],
     ODataOp.Or
-] | [ODataOp, ODataFilterValue | ODataFilterValue[]] | [ODataOp, ODataFilterValue | ODataFilterValue[], ODataOp.Or];
+] | [
+    ODataFilterType.AnyFunction | ODataFilterType.AllFunction,
+    ODataFilter | ODataSingleFilterOperation
+] | ODataSingleFilterOperation;
+type ODataSingleFilterOperation = [ODataOp, ODataFilterValue | ODataFilterValue[]] | [ODataOp, ODataFilterValue | ODataFilterValue[], ODataOp.Or];
 export type ODataFilterValue = string | number | Date | ODataGuid | boolean | undefined | null;
 export type ODataOrderByOperation = [string, 'asc' | 'desc'];
 export declare enum ODataFilterType {
     Raw = 1001,
     NestedFilter = 1002,
     BetweenInclusive = 1003,
-    BetweenExclusive = 1004
+    BetweenExclusive = 1004,
+    AnyFunction = 1005,
+    AllFunction = 1006
 }
 /**
  * @description
@@ -120,7 +126,10 @@ export declare enum ODataOp {
  * `/any(w: w/age ${odataOps[ODataOp.GreaterThanOrEqualTo]} 20)`
  * // '/any(w: w/age ge 20)
  */
-export declare const odataOps: Record<ODataOp, string>;
+export declare const odataOps: Record<ODataOp, string> & {
+    [ODataFilterType.AnyFunction]: string;
+    [ODataFilterType.AllFunction]: string;
+};
 /**
  * @description
  * OData options supported by the query builder
@@ -155,3 +164,4 @@ export declare class ODataGuid {
     get inner(): string;
     constructor(guid: string);
 }
+export {};

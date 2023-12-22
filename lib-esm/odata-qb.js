@@ -89,7 +89,20 @@ const builder = {
     },
     handleFilterOperation(key, operation) {
         const [operator, filterValue, joinOperator] = operation;
-        if (Array.isArray(filterValue)) {
+        const isFilterArray = Array.isArray(filterValue);
+        if (operator === ODataFilterType.AnyFunction ||
+            operator === ODataFilterType.AllFunction) {
+            const operatorStr = odataOps[operator];
+            const isNestedFilter = !isFilterArray;
+            if (isNestedFilter) {
+                const resultNestedFilter = builder.filter(builder.createFiltersWithModifiedKeys(filterValue));
+                return `(${key}/${operatorStr}(x: ${resultNestedFilter}))${andSeparator}`;
+            }
+            const resultFilter = builder.handleFilterOperation('x', filterValue);
+            const resultSeparator = joinOperator === ODataOp.Or ? orSeparator : andSeparator;
+            return `(${key}/${operatorStr}(x: ${builder.sliceSeparator(resultFilter, resultSeparator)}))${andSeparator}`;
+        }
+        if (isFilterArray) {
             return builder.createOrFilters(key, operator, filterValue, joinOperator);
         }
         if (operator === ODataFilterType.NestedFilter) {
@@ -137,6 +150,13 @@ const builder = {
         if (!operatorStr)
             return '';
         return `(${key} ${operatorStr} ${normalized})${separator}`;
+    },
+    createFiltersWithModifiedKeys(filters) {
+        const newFilters = {};
+        Object.keys(filters).forEach((key) => {
+            newFilters[`x/${key}`] = filters[key];
+        });
+        return newFilters;
     },
     normalize(val) {
         if (val == null || Number.isNaN(val))
