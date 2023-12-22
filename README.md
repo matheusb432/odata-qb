@@ -20,7 +20,7 @@ const result = odataQb.query('https://example.com', options);
 
 ## Examples
 
-A more comprehensive list of examples can be found in [examples](./examples) folder. To run then, use `ts-node`:
+A more comprehensive list of examples can be found in [examples](./examples) folder. To run them, use `ts-node`:
 
 ```bash
 ts-node examples/basic.ts
